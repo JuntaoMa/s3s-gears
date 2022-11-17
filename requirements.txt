@@ -3,3 +3,5 @@ msgpack_python
 packaging
 requests
 packaging
+mmh3
+numpy

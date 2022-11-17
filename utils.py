@@ -3,8 +3,6 @@
 # License: GPLv3
 
 import base64, datetime, json, re, sys, uuid
-import requests
-from bs4 import BeautifulSoup
 import iksm
 
 SPLATNET3_URL = iksm.SPLATNET3_URL
@@ -20,14 +18,15 @@ SUPPORTED_KEYS = [
 # SHA256 hash database for SplatNet 3 GraphQL queries
 # full list: https://github.com/samuelthomas2774/nxapi/discussions/11#discussioncomment-3614603
 translate_rid = {
-	'HomeQuery':                       'dba47124d5ec3090c97ba17db5d2f4b3', # blank vars
-	'LatestBattleHistoriesQuery':      '7d8b560e31617e981cf7c8aa1ca13a00', # INK / blank vars - query1
-	'RegularBattleHistoriesQuery':     'f6e7e0277e03ff14edfef3b41f70cd33', # INK / blank vars - query1
-	'BankaraBattleHistoriesQuery':     'c1553ac75de0a3ea497cdbafaa93e95b', # INK / blank vars - query1
-	'PrivateBattleHistoriesQuery':     '38e0529de8bc77189504d26c7a14e0b8', # INK / blank vars - query1
-	'VsHistoryDetailQuery':            '2b085984f729cd51938fc069ceef784a', # INK / req "vsResultId" - query2
-	'CoopHistoryQuery':                '817618ce39bcf5570f52a97d73301b30', # SR  / blank vars - query1
-	'CoopHistoryDetailQuery':          'f3799a033f0a7ad4b1b396f9a3bafb1e'  # SR  / req "coopHistoryDetailId" - query2
+	'HomeQuery':                         'dba47124d5ec3090c97ba17db5d2f4b3', # blank vars
+	'LatestBattleHistoriesQuery':        '7d8b560e31617e981cf7c8aa1ca13a00', # INK / blank vars - query1
+	'RegularBattleHistoriesQuery':       'f6e7e0277e03ff14edfef3b41f70cd33', # INK / blank vars - query1
+	'BankaraBattleHistoriesQuery':       'c1553ac75de0a3ea497cdbafaa93e95b', # INK / blank vars - query1
+	'PrivateBattleHistoriesQuery':       '38e0529de8bc77189504d26c7a14e0b8', # INK / blank vars - query1
+	'VsHistoryDetailQuery':              '2b085984f729cd51938fc069ceef784a', # INK / req "vsResultId" - query2
+	'CoopHistoryQuery':                  '817618ce39bcf5570f52a97d73301b30', # SR  / blank vars - query1
+	'CoopHistoryDetailQuery':            'f3799a033f0a7ad4b1b396f9a3bafb1e',  # SR  / req "coopHistoryDetailId" - query2
+	'myOutfitCommonDataEquipmentsQuery': 'd29cd0c2b5e6bac90dd5b817914832f8'
 }
 
 
@@ -134,6 +133,30 @@ def custom_key_exists(key, config_data, value=True):
 		print("(!) Checking unexpected custom key")
 	return str(config_data.get(key, None)).lower() == str(value).lower()
 
+
+def parseHistoryDetailId(id: str):
+	id = base64.b64decode(id).decode()
+	vsRE = 'VsHistoryDetail-([a-z0-9-]+):(\w+):(\d{8}T\d{6})_([0-9a-f-]{36})'
+	coopRE = 'CoopHistoryDetail-([a-z0-9-]+):(\d{8}T\d{6})_([0-9a-f-]{36})'
+	if re.match(vsRE, id):
+		uid, listType, timestamp, uuid = re.match(vsRE, id).groups()
+		return {
+			'type': "VsHistoryDetail",
+			'uid': uid,
+			'listType': listType,
+			'timestamp': timestamp,
+			'uuid': uuid,
+		}
+	elif re.match(coopRE, id):
+		uid, timestamp, uuid = re.match(coopRE, id).groups()
+		return {
+			'type': "VsHistoryDetail",
+			'uid': uid,
+			'timestamp': timestamp,
+			'uuid': uuid,
+		}
+	else:
+		raise ValueError(f'Invalid ID: {id}')
 
 if __name__ == "__main__":
 	print("This program cannot be run alone. See https://github.com/frozenpandaman/s3s")
