@@ -4,11 +4,10 @@
 # https://github.com/frozenpandaman/s3s
 # License: GPLv3
 
-import json, os, requests, sys, mmh3, base64
+import json, os, requests, sys, mmh3, base64, math, time
 import iksm, utils
-import numpy as np
 
-A_VERSION = "0.1.0"
+A_VERSION = "0.2.0"
 
 DEBUG = False
 
@@ -177,7 +176,7 @@ def gen_new_tokens(reason, force=False):
 def encryptKey(uid: str):
 	hash = mmh3.hash(uid, signed=False)
 	key = hash & 0xff
-	encrypted = base64.b64encode(np.array([i ^ key for i in uid.encode()], dtype=np.int8)).decode()
+	encrypted = base64.b64encode(bytearray([i ^ key for i in uid.encode()])).decode()
 	return {'key': encrypted, 'h': hash}
 
 
@@ -190,7 +189,7 @@ def fetch_json():
 	id = query_resp['historyGroups']['nodes'][0]['historyDetails']['nodes'][0]['id']
 	detailId = utils.parseHistoryDetailId(id)
 	uid = detailId['uid']
-	timestamp = detailId['timestamp']
+	timestamp = math.floor(time.time())
 	keys = encryptKey(uid)
 
 	sha = utils.translate_rid['myOutfitCommonDataEquipmentsQuery']
@@ -200,7 +199,7 @@ def fetch_json():
 	gears = {
 		**keys,
 		"timestamp": timestamp,
-		**query_resp
+		'gear': query_resp
 	}
 
 	return gears
@@ -245,7 +244,7 @@ def main():
 	gears = fetch_json()
 
 	cwd = os.getcwd()
-	with open(os.path.join(cwd, f"gears_{gears['timestamp']}.json"), 'w') as f:
+	with open(os.path.join(cwd, 'gears.json'), 'w') as f:
 		json.dump(gears, f, indent=4, sort_keys=False, ensure_ascii=False)
 		print("Created gears.json with information about all your gears.")
 
